@@ -6,9 +6,23 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
+  
+  // 显示系统信息
+  const nodeVersion = process.version;
+  const platform = `${os.platform()} ${os.release()}`;
+  const memory = `${Math.round(os.totalmem() / 1024 / 1024)} MB`;
+  
+  logger.log('====================================');
+  logger.log('多人捕鱼游戏服务器正在启动...');
+  logger.log(`运行环境: Node.js ${nodeVersion}`);
+  logger.log(`系统平台: ${platform}`);
+  logger.log(`系统内存: ${memory}`);
+  logger.log(`进程ID: ${process.pid}`);
+  logger.log('====================================');
   
   // 检查是否需要使用HTTPS
   const httpsEnabled = process.env.HTTPS_ENABLED === 'true';
@@ -52,8 +66,8 @@ async function bootstrap() {
 
   // 设置Swagger文档
   const config = new DocumentBuilder()
-    .setTitle('多人钓鱼游戏服务器')
-    .setDescription('多人钓鱼游戏服务器API文档')
+    .setTitle('多人捕鱼游戏服务器')
+    .setDescription('多人捕鱼游戏服务器API文档')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
@@ -65,7 +79,10 @@ async function bootstrap() {
   await app.listen(port);
   
   const protocol = httpsEnabled ? 'https' : 'http';
+  logger.log('====================================');
   logger.log(`服务器已在端口 ${port} 启动 (${protocol})`);
+  logger.log(`环境: ${process.env.NODE_ENV || 'development'}`);
   logger.log(`API文档地址: ${protocol}://localhost:${port}/api/docs`);
+  logger.log('====================================');
 }
 bootstrap();

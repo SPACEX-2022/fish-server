@@ -1,7 +1,7 @@
 {
   "name": "fish-game-server",
   "version": "0.1.0",
-  "description": "多人钓鱼游戏服务器",
+  "description": "多人捕鱼游戏服务器",
   "author": "",
   "private": true,
   "license": "MIT",
