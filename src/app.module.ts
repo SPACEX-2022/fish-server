@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './modules/auth/auth.module';
@@ -32,6 +34,11 @@ import { CommonModule } from './modules/common/common.module';
           return connection;
         },
       }),
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '..', 'static'),
+      serveRoot: '/static',
+      exclude: ['/api*'],
     }),
     AuthModule,
     UserModule,
