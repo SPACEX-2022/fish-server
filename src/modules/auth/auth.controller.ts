@@ -8,6 +8,7 @@ export class AuthController {
 
   @Post('wx-login')
   async wxLogin(@Body() wxLoginDto: WxLoginDto) {
+    console.log('wxLoginDto', wxLoginDto);
     return this.authService.wxLogin(wxLoginDto);
   }
 } 
