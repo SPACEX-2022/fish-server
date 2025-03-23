@@ -1,14 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 import { UserDto } from '../../user/dto/user.dto';
 
 export class WxLoginDto {
   @ApiProperty({ description: '微信登录code' })
+  @IsString()
+  @IsNotEmpty({ message: '微信登录code不能为空' })
   code: string;
 
   @ApiProperty({ description: '用户昵称', required: false })
+  @IsString()
+  @IsOptional()
   nickname?: string;
 
   @ApiProperty({ description: '用户头像URL', required: false })
+  @IsString()
+  @IsOptional()
   avatarUrl?: string;
 }
 
