@@ -25,8 +25,8 @@ import { JwtModule } from '@nestjs/jwt';
     RedisService, 
     DatabaseLoggerService, 
     HeartbeatService,
-    HeartbeatGateway
+    HeartbeatGateway,
   ],
-  exports: [RedisService, HeartbeatService, JwtModule],
+  exports: [RedisService, HeartbeatService, JwtModule, HeartbeatGateway],
 })
 export class CommonModule {} 

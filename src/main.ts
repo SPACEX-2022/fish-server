@@ -9,6 +9,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { TransformInterceptor } from './modules/common/interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './modules/common/filters/http-exception.filter';
+import { WsAdapter } from './modules/common/adapters/ws.adapter';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -73,6 +74,9 @@ async function bootstrap() {
   
   // 添加全局异常过滤器
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  // 应用WebSocket适配器，使用原生WebSocket协议
+  app.useWebSocketAdapter(new WsAdapter(app));
 
   // 设置Swagger文档
   const config = new DocumentBuilder()

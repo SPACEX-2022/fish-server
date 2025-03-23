@@ -29,10 +29,12 @@
     "@nestjs/passport": "^10.0.0",
     "@nestjs/platform-express": "^10.0.0",
     "@nestjs/platform-socket.io": "^10.0.0",
+    "@nestjs/platform-ws": "^11.0.12",
     "@nestjs/serve-static": "^5.0.3",
     "@nestjs/swagger": "^7.0.0",
     "@nestjs/websockets": "^10.0.0",
     "@types/mongoose": "^5.11.97",
+    "@types/ws": "^8.18.0",
     "axios": "^1.8.4",
     "bcrypt": "^5.1.0",
     "class-transformer": "^0.5.1",
@@ -47,7 +49,8 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.6.1",
     "swagger-ui-express": "^5.0.0",
-    "uuid": "^11.1.0"
+    "uuid": "^11.1.0",
+    "ws": "^8.18.1"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",

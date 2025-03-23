@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket测试</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 16px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        .disconnect {
+            background-color: #f44336;
+        }
+        .disconnect:hover {
+            background-color: #d32f2f;
+        }
+        .send {
+            background-color: #2196F3;
+        }
+        .send:hover {
+            background-color: #0b7dda;
+        }
+        .log-container {
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f5f5f5;
+        }
+        .log {
+            margin: 5px 0;
+            padding: 5px;
+            border-radius: 4px;
+        }
+        .status {
+            color: #0366d6;
+        }
+        .sent {
+            background-color: #e3f2fd;
+        }
+        .received {
+            background-color: #e8f5e9;
+        }
+        .error {
+            background-color: #ffebee;
+            color: #d32f2f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h2>WebSocket连接</h2>
+            <div class="input-group">
+                <input type="text" id="ws-url" value="ws://localhost:3000/api/heartbeat" placeholder="WebSocket URL">
+                <input type="text" id="token" placeholder="JWT Token (可选)">
+                <button id="connect">连接</button>
+                <button id="disconnect" class="disconnect" disabled>断开</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>发送消息</h2>
+            <div class="input-group">
+                <input type="text" id="event-type" placeholder="事件类型，如 heartbeat">
+                <button id="send-message" class="send" disabled>发送</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>日志</h2>
+            <div class="log-container" id="log"></div>
+        </div>
+    </div>
+
+    <script>
+        let socket = null;
+        
+        const connectBtn = document.getElementById('connect');
+        const disconnectBtn = document.getElementById('disconnect');
+        const sendBtn = document.getElementById('send-message');
+        const wsUrlInput = document.getElementById('ws-url');
+        const tokenInput = document.getElementById('token');
+        const eventTypeInput = document.getElementById('event-type');
+        const logContainer = document.getElementById('log');
+        
+        function logMessage(message, type = 'status') {
+            const logElement = document.createElement('div');
+            logElement.classList.add('log', type);
+            logElement.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            logContainer.appendChild(logElement);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+        
+        connectBtn.addEventListener('click', () => {
+            const wsUrl = wsUrlInput.value.trim();
+            const token = tokenInput.value.trim();
+            
+            if (!wsUrl) {
+                logMessage('请输入WebSocket URL', 'error');
+                return;
+            }
+            
+            try {
+                // 构建URL，如果有token，添加到查询参数
+                let fullUrl = wsUrl;
+                if (token) {
+                    fullUrl += (wsUrl.includes('?') ? '&' : '?') + `token=${encodeURIComponent(token)}`;
+                }
+                
+                logMessage(`正在连接到 ${fullUrl}...`);
+                socket = new WebSocket(fullUrl);
+                
+                socket.onopen = (event) => {
+                    logMessage('连接成功！');
+                    connectBtn.disabled = true;
+                    disconnectBtn.disabled = false;
+                    sendBtn.disabled = false;
+                };
+                
+                socket.onmessage = (event) => {
+                    const data = event.data;
+                    logMessage(`收到消息: ${data}`, 'received');
+                    
+                    try {
+                        // 尝试解析JSON
+                        const parsedData = JSON.parse(data);
+                        console.log('Parsed message:', parsedData);
+                    } catch (e) {
+                        console.error('Failed to parse message as JSON:', e);
+                    }
+                };
+                
+                socket.onerror = (error) => {
+                    logMessage(`发生错误: ${error.message || 'Unknown error'}`, 'error');
+                };
+                
+                socket.onclose = (event) => {
+                    const reason = event.reason ? ` Reason: ${event.reason}` : '';
+                    logMessage(`连接已关闭. Code: ${event.code}.${reason}`);
+                    socket = null;
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    sendBtn.disabled = true;
+                };
+                
+            } catch (error) {
+                logMessage(`创建WebSocket时出错: ${error.message}`, 'error');
+            }
+        });
+        
+        disconnectBtn.addEventListener('click', () => {
+            if (socket) {
+                logMessage('正在关闭连接...');
+                socket.close();
+                // onclose事件处理器将处理UI更新
+            }
+        });
+        
+        sendBtn.addEventListener('click', () => {
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                logMessage('WebSocket未连接或未准备好', 'error');
+                return;
+            }
+            
+            const eventType = eventTypeInput.value.trim();
+            if (!eventType) {
+                logMessage('请输入要发送的事件类型', 'error');
+                return;
+            }
+            
+            // 构造消息对象
+            const messageData = { event: eventType, data: {} };
+            const messageString = JSON.stringify(messageData);
+            
+            try {
+                socket.send(messageString);
+                logMessage(`已发送消息: ${messageString}`, 'sent');
+            } catch (error) {
+                logMessage(`发送消息时出错: ${error.message}`, 'error');
+            }
+        });
+    </script>
+</body>
+</html> 
