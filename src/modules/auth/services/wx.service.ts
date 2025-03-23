@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 
@@ -12,6 +12,7 @@ export class WxService {
       const secret = this.configService.get<string>('WX_SECRET');
       const url = `https://api.weixin.qq.com/sns/jscode2session?appid=${appid}&secret=${secret}&js_code=${code}&grant_type=authorization_code`;
 
+      Logger.debug('微信登录请求URL:', url);
       const response = await axios.get(url);
       const data = response.data;
 
