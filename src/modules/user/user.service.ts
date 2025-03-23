@@ -1,18 +1,28 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Document } from 'mongoose';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto, UpdateUserDto, UserDto, UserProfileDto } from './dto/user.dto';
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
-    const newUser = new this.userModel(createUserDto);
-    return newUser.save();
+    try {
+      this.logger.log(`创建新用户: ${JSON.stringify(createUserDto)}`);
+      const newUser = new this.userModel(createUserDto);
+      const savedUser = await newUser.save();
+      this.logger.log(`用户创建成功: ${savedUser._id}`);
+      return savedUser;
+    } catch (error) {
+      this.logger.error(`创建用户失败: ${error.message}`, error.stack);
+      throw error;
+    }
   }
 
   async findByOpenId(openId: string): Promise<User | null> {
@@ -57,8 +67,12 @@ export class UserService {
    * 将用户文档转换为UserDto
    */
   toUserDto(user: User | UserDocument): UserDto {
+    const userId = user instanceof Document 
+      ? user._id.toString() 
+      : (user as any)._id.toString();
+      
     return {
-      id: user._id.toString(),
+      id: userId,
       openId: user.openId,
       nickname: user.nickname,
       avatarUrl: user.avatarUrl,
@@ -75,9 +89,13 @@ export class UserService {
     const winRate = user.gamesPlayed > 0 
       ? Math.round((user.wins / user.gamesPlayed) * 100)
       : 0;
+    
+    const userId = user instanceof Document 
+      ? user._id.toString() 
+      : (user as any)._id.toString();
       
     return {
-      id: user._id.toString(),
+      id: userId,
       nickname: user.nickname,
       avatarUrl: user.avatarUrl,
       totalScore: user.totalScore,

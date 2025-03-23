@@ -89,7 +89,7 @@ export class HeartbeatGateway implements OnGatewayConnection, OnGatewayDisconnec
         timestamp: Date.now()
       });
       
-      this.logger.debug(`用户 ${userId} 心跳已更新`);
+      this.logger.debug(`已建立心跳连接 用户 ${userId} 心跳已更新`);
     } catch (error) {
       this.logger.error(`处理心跳消息时出错: ${error.message}`);
       client.emit('error', { message: '处理心跳消息时出错' });

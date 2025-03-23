@@ -6,6 +6,7 @@ import { WxService } from './services/wx.service';
 import { LoginResponseDto, WxLoginDto } from './dto/auth.dto';
 import { UserDocument } from '../user/schemas/user.schema';
 import { HeartbeatService } from '../common/services/heartbeat.service';
+import { Document } from 'mongoose';
 
 @Injectable()
 export class AuthService {
@@ -40,28 +41,39 @@ export class AuthService {
           ...(wxLoginDto.nickname && { nickname: wxLoginDto.nickname }),
           ...(wxLoginDto.avatarUrl && { avatarUrl: wxLoginDto.avatarUrl }),
         };
-        const updatedUser = await this.userService.update((user as UserDocument)._id.toString(), updateData);
+        
+        // 获取用户ID
+        const userId = user instanceof Document 
+          ? user._id.toString() 
+          : (user as any)._id.toString();
+          
+        const updatedUser = await this.userService.update(userId, updateData);
         if (updatedUser) {
           user = updatedUser;
         }
       }
     }
 
+    // 获取用户ID
+    const userId = user instanceof Document 
+      ? user._id.toString() 
+      : (user as any)._id.toString();
+
     // 生成JWT令牌
     const payload = {
-      sub: (user as UserDocument)._id.toString(),
+      sub: userId,
       openId: user.openId,
       nickname: user.nickname,
     };
     const token = this.jwtService.sign(payload);
 
     // 登录时初始化心跳记录
-    await this.heartbeatService.recordHeartbeat(
-      (user as UserDocument)._id.toString(), 
-      'auth-login'  // 使用特殊标识，表示这是登录时创建的心跳
-    );
+    // await this.heartbeatService.recordHeartbeat(
+    //   userId, 
+    //   'auth-login'  // 使用特殊标识，表示这是登录时创建的心跳
+    // );
 
-    const dto = this.userService.toUserDto(user as UserDocument);
+    const dto = this.userService.toUserDto(user);
 
     return {
       token,

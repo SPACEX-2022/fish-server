@@ -15,6 +15,7 @@ export class WxService {
       Logger.debug('微信登录请求URL:', url);
       const response = await axios.get(url);
       const data = response.data;
+      Logger.debug('微信登录响应:', data, JSON.stringify(data));
 
       if (data.errcode) {
         throw new BadRequestException(`微信登录失败: ${data.errmsg}`);
