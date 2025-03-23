@@ -115,6 +115,12 @@ export class HeartbeatGateway implements OnGatewayConnection, OnGatewayDisconnec
       const userId = client.user.sub;
       const clientId = client.id;
       
+      // 发送心跳响应
+      this.sendToClient(client, 'heartbeat', { 
+        status: 'ok',
+        timestamp: Date.now()
+      });
+      
       // 记录心跳
       await this.heartbeatService.recordHeartbeat(userId, clientId);
       
@@ -124,12 +130,6 @@ export class HeartbeatGateway implements OnGatewayConnection, OnGatewayDisconnec
         userClientIds.push(clientId);
         this.userClients.set(userId, userClientIds);
       }
-      
-      // 发送心跳响应
-      this.sendToClient(client, 'heartbeat', { 
-        status: 'ok',
-        timestamp: Date.now()
-      });
       
       this.logger.debug(`用户 ${userId} 的客户端 ${clientId} 心跳已更新`);
     } catch (error) {
