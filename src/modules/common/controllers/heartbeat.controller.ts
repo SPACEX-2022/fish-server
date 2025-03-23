@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagg
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { HeartbeatService } from '../services/heartbeat.service';
 import { Request } from 'express';
+import { success } from '../utils/response.util';
 
 // 扩展Request类型以包含user属性
 interface RequestWithUser extends Request {
@@ -28,7 +29,7 @@ export class HeartbeatController {
     
     await this.heartbeatService.recordHeartbeat(userId, clientId);
     
-    return { status: 'ok', message: '心跳已记录', timestamp: Date.now() };
+    return success({ status: 'ok', timestamp: Date.now() }, '心跳已记录');
   }
 
   @Get('status')
@@ -40,10 +41,10 @@ export class HeartbeatController {
     const userId = req.user.sub;
     const status = await this.heartbeatService.getUserOnlineInfo(userId);
     
-    return {
+    return success({
       ...status,
       timestamp: Date.now(),
-    };
+    }, '获取在线状态成功');
   }
 
   @Get('online-count')
@@ -52,9 +53,9 @@ export class HeartbeatController {
   async getOnlineCount() {
     const count = await this.heartbeatService.getOnlineUserCount();
     
-    return {
+    return success({
       onlineCount: count,
       timestamp: Date.now(),
-    };
+    }, '获取在线用户数成功');
   }
 } 

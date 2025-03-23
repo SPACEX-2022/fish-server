@@ -7,6 +7,8 @@ import { AppModule } from './app.module';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import { TransformInterceptor } from './modules/common/interceptors/transform.interceptor';
+import { HttpExceptionFilter } from './modules/common/filters/http-exception.filter';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -63,6 +65,12 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+
+  // 添加全局响应拦截器
+  app.useGlobalInterceptors(new TransformInterceptor());
+  
+  // 添加全局异常过滤器
+  app.useGlobalFilters(new HttpExceptionFilter());
 
   // 设置Swagger文档
   const config = new DocumentBuilder()
