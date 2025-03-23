@@ -21,85 +21,131 @@
   <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
   [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
-## Description
+# 捕鱼游戏服务器
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+基于NestJS开发的多人捕鱼游戏服务器，游戏主要玩法模仿游戏厅街机-捕鱼达人，服务端主要负责微信登录以及多人模式的功能。
 
-## Project setup
+## 技术栈
+
+- **框架**: [NestJS](https://nestjs.com/)
+- **数据库**: MongoDB (使用Mongoose ODM)
+- **缓存**: Redis
+- **认证**: JWT + Passport
+- **实时通信**: 原生WebSocket
+- **API文档**: Swagger
+
+## 主要功能
+
+- **用户授权**: 微信小游戏登录授权
+- **多人游戏房间**: 创建/加入/退出游戏房间
+- **实时通信**: 使用WebSocket进行游戏状态同步
+- **排行榜系统**: 基于Redis实现的高效排行榜
+- **心跳检测**: 基于WebSocket的用户在线状态追踪
+- **数据持久化**: 用户数据、游戏记录保存至MongoDB
+
+## 项目设置
 
 ```bash
 $ pnpm install
 ```
 
-## Compile and run the project
+## 编译和运行项目
 
 ```bash
-# development
+# 开发模式
 $ pnpm run start
 
-# watch mode
+# 监视模式
 $ pnpm run start:dev
 
-# production mode
+# 生产模式
 $ pnpm run start:prod
 ```
 
-## Run tests
+## WebSocket连接说明
+
+服务器使用原生WebSocket协议进行实时通信，主要端点：
+
+### 心跳检测
+
+- **URL**: `ws://服务器地址:端口/api/heartbeat`
+- **认证**: 通过URL参数传递JWT令牌 `?token=your_jwt_token`
+- **事件**:
+  - `connection`: 连接建立时服务器发送的事件
+  - `heartbeat`: 客户端定期发送以维持连接
+  - `status`: 客户端请求获取状态信息
+
+示例代码:
+```javascript
+// 连接WebSocket
+const token = 'your_jwt_token';
+const ws = new WebSocket(`ws://localhost:3000/api/heartbeat?token=${token}`);
+
+// 连接建立
+ws.onopen = () => {
+  console.log('连接已建立');
+  
+  // 定时发送心跳
+  setInterval(() => {
+    ws.send(JSON.stringify({ event: 'heartbeat', data: {} }));
+  }, 30000);
+};
+
+// 接收消息
+ws.onmessage = (event) => {
+  const message = JSON.parse(event.data);
+  console.log('收到消息:', message);
+};
+```
+
+### 游戏房间
+
+- **URL**: `ws://服务器地址:端口/api/game-room`
+- **认证**: 同样通过JWT令牌进行认证
+- **主要事件**: 请参考API文档
+
+## 运行测试
 
 ```bash
-# unit tests
+# 单元测试
 $ pnpm run test
 
-# e2e tests
+# e2e测试
 $ pnpm run test:e2e
 
-# test coverage
+# 测试覆盖率
 $ pnpm run test:cov
 ```
 
-## Deployment
+## 配置说明
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+项目使用环境变量进行配置，主要配置项：
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+```dotenv
+# 应用配置
+PORT=3000
+API_PREFIX=/api
+NODE_ENV=development
 
-```bash
-$ pnpm install -g mau
-$ mau deploy
+# 数据库配置
+MONGODB_URI=mongodb://localhost:27017/fish-game
+
+# Redis配置
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# JWT配置
+JWT_SECRET=your_secret_key
+JWT_EXPIRES_IN=7d
+
+# 微信配置
+WX_APP_ID=your_wx_app_id
+WX_APP_SECRET=your_wx_app_secret
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 使用PM2部署服务并配置SSL
 
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-
-# 使用PM2部署服务并配置SSL
-
-## 准备工作
+### 准备工作
 
 1. 确保安装了PM2：
 ```bash
@@ -113,7 +159,7 @@ pnpm add -g pm2
 pnpm install
 ```
 
-## SSL证书配置
+### SSL证书配置
 
 1. 创建存放SSL证书的目录：
 ```bash
@@ -134,9 +180,9 @@ SSL_CERT_PATH=./ssl/cert.pem
 SSL_KEY_PATH=./ssl/key.pem
 ```
 
-## 部署服务
+### 部署服务
 
-### Linux/macOS
+#### Linux/macOS
 
 使用提供的部署脚本：
 ```bash
@@ -144,14 +190,14 @@ chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
-### Windows
+#### Windows
 
 使用提供的批处理脚本：
 ```
 scripts\deploy.bat
 ```
 
-## PM2常用命令
+### PM2常用命令
 
 - 查看应用状态：
 ```bash
@@ -178,3 +224,17 @@ pm2 stop fish-game-server
 pm2 startup
 pm2 save
 ```
+
+## 协议
+
+本项目基于 [MIT 许可证](LICENSE)
+
+## Stay in touch
+
+- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
+- Website - [https://nestjs.com](https://nestjs.com/)
+- Twitter - [@nestframework](https://twitter.com/nestframework)
+
+## License
+
+Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
