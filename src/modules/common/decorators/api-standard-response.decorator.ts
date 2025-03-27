@@ -20,8 +20,10 @@ export function ApiStandardResponse<T extends Type<any>>(
     ApiOkResponse({
       description,
       schema: {
+        title: 'HttpResponse',
         allOf: [
           {
+            type: 'object',
             properties: {
               code: {
                 type: 'number',

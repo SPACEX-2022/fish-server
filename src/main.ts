@@ -10,6 +10,7 @@ import * as os from 'os';
 import { TransformInterceptor } from './modules/common/interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './modules/common/filters/http-exception.filter';
 import { WsAdapter } from './modules/common/adapters/ws.adapter';
+import { fixArraySchemas } from './modules/common/plugins/swagger-array.plugin';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -83,10 +84,46 @@ async function bootstrap() {
     .setTitle('多人捕鱼游戏服务器')
     .setDescription('多人捕鱼游戏服务器API文档')
     .setVersion('1.0')
-    .addBearerAuth()
+    .addBearerAuth({
+      type: 'http',
+      scheme: 'bearer',
+      bearerFormat: 'JWT',
+      name: 'JWT',
+      description: '输入JWT token',
+      in: 'header',
+    })
+    .addTag('认证', '用户认证与登录相关接口')
+    .addTag('用户', '用户信息相关接口')
+    .addTag('房间', '游戏房间相关接口')
+    .addTag('游戏', '游戏相关接口')
     .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document);
+  
+  const document = SwaggerModule.createDocument(app, config, {
+    deepScanRoutes: true,
+    extraModels: [
+      // 添加所有需要在Swagger中显示的DTOs
+      require('./modules/user/dto/user.dto').UserProfileDto,
+      require('./modules/user/dto/user.dto').UserDto,
+      require('./modules/auth/dto/auth.dto').LoginResponseDto,
+      require('./modules/room/dto/room.dto').RoomResponseDto,
+      require('./modules/game/dto/game.dto').GameRecordDto,
+      require('./modules/game/dto/game.dto').PlayerGameRecordsDto,
+    ],
+  });
+  
+  // 修复数组显示问题
+  const fixedDocument = fixArraySchemas(document);
+  
+  SwaggerModule.setup('api/docs', app, fixedDocument, {
+    swaggerOptions: {
+      persistAuthorization: true,
+      docExpansion: 'none',
+      tagsSorter: 'alpha',
+      operationsSorter: 'alpha',
+      defaultModelsExpandDepth: 1,
+      defaultModelExpandDepth: 1,
+    },
+  });
 
   // 启动服务
   const port = configService.get<number>('PORT', 3000);

@@ -390,4 +390,73 @@ export class RoomService {
       createdAt: room.createdAt,
     };
   }
+
+  /**
+   * 获取可匹配的房间 - 未开始且人数未满的公共房间
+   * 使用 Redis 锁确保高并发情况下不会将同一房间分配给过多用户
+   */
+  async findMatchableRoom(userId: string): Promise<RoomDocument | null> {
+    // 首先检查用户是否已在房间中
+    const existingUserRoom = await this.roomModel.findOne({
+      'players.userId': userId,
+      status: { $ne: RoomStatus.FINISHED },
+    }).exec();
+    
+    if (existingUserRoom) {
+      throw new BadRequestException('用户已在其他房间中');
+    }
+
+    // 查找所有可匹配的公共房间（等待中且人数未满）
+    const matchableRooms = await this.roomModel.find({
+      type: RoomType.PUBLIC,
+      status: RoomStatus.WAITING,
+    }).exec();
+    
+    // 如果没有可匹配的房间，返回null
+    if (!matchableRooms || matchableRooms.length === 0) {
+      return null;
+    }
+    
+    // 尝试为用户锁定一个房间
+    for (const room of matchableRooms) {
+      // 如果房间已满，跳过
+      if (room.players.length >= this.maxPlayersPerRoom) {
+        continue;
+      }
+      
+      // 使用Redis尝试锁定该房间，锁定时间为5秒
+      const lockKey = `room:lock:${room._id}`;
+      const acquired = await this.redisService.acquireLock(lockKey, userId, 5);
+      
+      if (acquired) {
+        try {
+          // 再次检查房间状态和玩家数量（可能在获取锁的过程中被其他请求修改）
+          const freshRoom = await this.roomModel.findById(room._id).exec();
+          if (freshRoom && 
+              freshRoom.status === RoomStatus.WAITING && 
+              freshRoom.players.length < this.maxPlayersPerRoom) {
+            return freshRoom;
+          }
+        } finally {
+          // 无论成功与否，释放锁
+          await this.redisService.releaseLock(lockKey, userId);
+        }
+      }
+    }
+    
+    // 没有找到可用房间
+    return null;
+  }
+
+  /**
+   * 将房间信息转换为匹配响应DTO
+   */
+  toMatchRoomResponseDto(room: RoomDocument): any {
+    return {
+      id: room._id,
+      roomCode: room.roomCode,
+      playerCount: room.players.length,
+      maxPlayerCount: this.maxPlayersPerRoom
+    };
+  }
 } 

@@ -76,4 +76,18 @@ export class RoomListItemDto {
 
   @ApiProperty({ description: '创建时间' })
   createdAt: Date;
+}
+
+export class MatchRoomResponseDto {
+  @ApiProperty({ description: '房间ID' })
+  id: string;
+
+  @ApiProperty({ description: '房间代码' })
+  roomCode: string;
+
+  @ApiProperty({ description: '当前玩家数量' })
+  playerCount: number;
+
+  @ApiProperty({ description: '最大玩家数量' })
+  maxPlayerCount: number;
 } 
