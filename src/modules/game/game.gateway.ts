@@ -740,7 +740,7 @@ export class GameGateway
       // 发送心跳响应
       return { 
         success: true, 
-        type: 'heartbeat',
+        event: 'heartbeat',
         data: { 
           status: 'ok',
           timestamp: Date.now()
@@ -750,7 +750,7 @@ export class GameGateway
       this.logger.error(`处理心跳消息时出错: ${error.message}`);
       return { 
         success: false, 
-        type: 'heartbeat',
+        event: 'heartbeat',
         message: '处理心跳消息时出错' 
       };
     }
@@ -770,7 +770,7 @@ export class GameGateway
       
       return {
         success: true,
-        type: 'status',
+        event: 'status',
         data: {
           ...status,
           timestamp: Date.now()
@@ -780,7 +780,7 @@ export class GameGateway
       this.logger.error(`处理状态请求时出错: ${error.message}`);
       return { 
         success: false, 
-        type: 'status',
+        event: 'status',
         message: '处理状态请求时出错' 
       };
     }
