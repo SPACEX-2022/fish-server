@@ -3,7 +3,6 @@ import { RedisService } from './services/redis.service';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DatabaseLoggerService } from './services/database-logger.service';
 import { HeartbeatService } from './services/heartbeat.service';
-import { HeartbeatController } from './controllers/heartbeat.controller';
 import { JwtModule } from '@nestjs/jwt';
 
 @Global()
@@ -19,7 +18,6 @@ import { JwtModule } from '@nestjs/jwt';
       inject: [ConfigService],
     }),
   ],
-  controllers: [HeartbeatController],
   providers: [
     RedisService, 
     DatabaseLoggerService, 

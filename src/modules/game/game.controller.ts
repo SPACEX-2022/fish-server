@@ -4,14 +4,51 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { GetUser } from '../auth/decorators/get-user.decorator';
 import { JwtPayload } from '../auth/dto/auth.dto';
 import { GameRecordDto, PlayerGameRecordsDto } from './dto/game.dto';
-import { ApiTags, ApiBearerAuth, ApiParam } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiParam, ApiResponse, ApiOperation } from '@nestjs/swagger';
 import { ApiStandardResponse } from '../common/decorators/api-standard-response.decorator';
+import { success } from '../common/utils/response.util';
+import { HeartbeatService } from '../common/services/heartbeat.service';
+
+// 扩展Request类型以包含user属性
+interface RequestWithUser extends Request {
+  user: {
+    sub: string;
+    [key: string]: any;
+  };
+}
 
 @ApiTags('游戏')
 @ApiBearerAuth()
 @Controller('game')
 export class GameController {
-  constructor(private readonly gameService: GameService) {}
+  constructor(private readonly gameService: GameService, private readonly heartbeatService: HeartbeatService) {}
+
+  @Get('status')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '获取当前用户的在线状态' })
+  @ApiResponse({ status: 200, description: '返回用户的在线状态信息' })
+  async getStatus(@Req() req: RequestWithUser) {
+    const userId = req.user.sub;
+    const status = await this.heartbeatService.getUserOnlineInfo(userId);
+    
+    return success({
+      ...status,
+      timestamp: Date.now(),
+    }, '获取在线状态成功');
+  }
+
+  @Get('online-count')
+  @ApiOperation({ summary: '获取当前在线用户数' })
+  @ApiResponse({ status: 200, description: '返回当前在线用户数' })
+  async getOnlineCount() {
+    const count = await this.heartbeatService.getOnlineUserCount();
+    
+    return success({
+      onlineCount: count,
+      timestamp: Date.now(),
+    }, '获取在线用户数成功');
+  }
 
   @UseGuards(JwtAuthGuard)
   @Get('records')
