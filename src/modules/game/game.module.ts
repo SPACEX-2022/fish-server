@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { GameGateway } from './game.gateway';
 import { GameService } from './game.service';
@@ -14,7 +14,7 @@ import { GameController } from './game.controller';
     MongooseModule.forFeature([
       { name: GameRecord.name, schema: GameRecordSchema },
     ]),
-    RoomModule,
+    forwardRef(() => RoomModule),
     UserModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],

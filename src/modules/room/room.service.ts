@@ -27,6 +27,20 @@ export class RoomService {
   }
 
   /**
+   * 获取RoomService实例（用于处理循环依赖）
+   */
+  getRoomService(): RoomService {
+    return this;
+  }
+
+  /**
+   * 获取GameService实例（用于处理循环依赖）
+   */
+  getGameService(): GameService {
+    return this.gameService;
+  }
+
+  /**
    * 生成随机房间号
    */
   private generateRoomCode(): string {
@@ -583,13 +597,6 @@ export class RoomService {
    */
   async getUserById(userId: string): Promise<User | null> {
     return this.userService.findById(userId);
-  }
-
-  /**
-   * 获取游戏服务
-   */
-  getGameService(): GameService {
-    return this.gameService;
   }
 
   /**

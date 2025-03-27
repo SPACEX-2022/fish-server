@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { RoomService } from '../room/room.service';
@@ -17,12 +17,20 @@ export class GameService {
 
   constructor(
     @InjectModel(GameRecord.name) private gameRecordModel: Model<GameRecordDocument>,
+    @Inject(forwardRef(() => RoomService))
     private roomService: RoomService,
     private userService: UserService,
     private configService: ConfigService,
     private redisService: RedisService,
   ) {
     this.gameDuration = this.configService.get<number>('GAME_DURATION_SECONDS', 60);
+  }
+
+  /**
+   * 获取GameService实例（用于处理循环依赖）
+   */
+  getGameService(): GameService {
+    return this;
   }
 
   /**
