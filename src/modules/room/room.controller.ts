@@ -5,8 +5,9 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateRoomDto, JoinRoomDto, RoomResponseDto, MatchRoomResponseDto } from './dto/room.dto';
 import { ApiTags, ApiBearerAuth, ApiResponse, ApiParam, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { ApiStandardResponse } from '../common/decorators/api-standard-response.decorator';
-import { RoomType } from './schemas/room.schema';
+import { RoomType, RoomStatus } from './schemas/room.schema';
 import { PlayerPositionsDto } from './dto/player-position.dto';
+import { MatchQueueService } from './services/match-queue.service';
 
 @ApiTags('房间')
 @ApiBearerAuth()
@@ -16,6 +17,7 @@ export class RoomController {
     private readonly roomService: RoomService,
     @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
+    private readonly matchQueueService: MatchQueueService,
   ) {}
 
   @UseGuards(JwtAuthGuard)
@@ -133,21 +135,25 @@ export class RoomController {
       throw new NotFoundException('用户不存在');
     }
 
-    // 查找可匹配的房间
-    let room = await this.roomService.findMatchableRoom(req.user.sub);
-
-    // 如果没有可用房间，创建一个新的公共房间
-    if (!room) {
-      const createRoomDto = { type: RoomType.PUBLIC };
-      room = await this.roomService.create(req.user.sub, user, createRoomDto);
-    } else {
-      // 将用户加入找到的房间
-      const joinRoomDto = { roomCode: room.roomCode };
-      room = await this.roomService.joinRoom(req.user.sub, user, joinRoomDto);
+    // 检查用户是否已在其他房间中
+    const existingRoom = await this.roomService.findOne({
+      'players.userId': req.user.sub,
+      status: { $ne: RoomStatus.FINISHED },
+    });
+    
+    if (existingRoom) {
+      throw new BadRequestException('用户已在其他房间中');
     }
 
-    // 转换为匹配响应DTO并返回
-    return this.roomService.toMatchRoomResponseDto(room);
+    // 将用户添加到匹配队列
+    await this.matchQueueService.addPlayerToQueue(user);
+
+    // 返回匹配请求已接收的响应
+    return {
+      success: true,
+      message: '匹配请求已接收，等待匹配中...',
+      status: 'matching'
+    };
   }
 
   @Get('player-positions')

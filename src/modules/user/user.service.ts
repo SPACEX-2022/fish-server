@@ -29,7 +29,7 @@ export class UserService {
     return this.userModel.findOne({ openId }).exec();
   }
 
-  async findById(id: string): Promise<User | null> {
+  async findById(id: string): Promise<UserDocument | null> {
     return this.userModel.findById(id).exec();
   }
 

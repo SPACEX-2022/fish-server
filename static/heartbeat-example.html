@@ -152,7 +152,7 @@
             
             try {
                 // 创建Socket.IO连接
-                socket = io(`${serverUrl}/heartbeat`, {
+                socket = io(serverUrl, {
                     auth: {
                         token
                     },

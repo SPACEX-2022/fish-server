@@ -79,15 +79,12 @@ export class RoomListItemDto {
 }
 
 export class MatchRoomResponseDto {
-  @ApiProperty({ description: '房间ID' })
-  id: string;
+  @ApiProperty({ description: '操作是否成功' })
+  success: boolean;
 
-  @ApiProperty({ description: '房间代码' })
-  roomCode: string;
+  @ApiProperty({ description: '提示消息' })
+  message: string;
 
-  @ApiProperty({ description: '当前玩家数量' })
-  playerCount: number;
-
-  @ApiProperty({ description: '最大玩家数量' })
-  maxPlayerCount: number;
+  @ApiProperty({ description: '匹配状态', enum: ['matching', 'matched', 'canceled'] })
+  status: string;
 } 

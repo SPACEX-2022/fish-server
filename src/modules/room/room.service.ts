@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException, Inject, forwardRef } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
@@ -7,6 +7,8 @@ import { Room, RoomDocument, RoomStatus, RoomType } from './schemas/room.schema'
 import { CreateRoomDto, JoinRoomDto, RoomResponseDto, RoomListItemDto } from './dto/room.dto';
 import { User, UserDocument } from '../user/schemas/user.schema';
 import { RedisService } from '../common/services/redis.service';
+import { UserService } from '../user/user.service';
+import { GameService } from '../game/game.service';
 
 @Injectable()
 export class RoomService {
@@ -16,6 +18,10 @@ export class RoomService {
     @InjectModel(Room.name) private roomModel: Model<RoomDocument>,
     private configService: ConfigService,
     private redisService: RedisService,
+    @Inject(forwardRef(() => UserService))
+    private userService: UserService,
+    @Inject(forwardRef(() => GameService))
+    private gameService: GameService,
   ) {
     this.maxPlayersPerRoom = this.configService.get<number>('MAX_PLAYERS_PER_ROOM', 4);
   }
@@ -462,10 +468,9 @@ export class RoomService {
    */
   toMatchRoomResponseDto(room: RoomDocument): any {
     return {
-      id: room._id,
-      roomCode: room.roomCode,
-      playerCount: room.players.length,
-      maxPlayerCount: this.maxPlayersPerRoom
+      success: true,
+      message: '匹配成功',
+      status: 'matched'
     };
   }
 
@@ -571,5 +576,26 @@ export class RoomService {
     }
     
     return room.save();
+  }
+
+  /**
+   * 获取用户信息
+   */
+  async getUserById(userId: string): Promise<User | null> {
+    return this.userService.findById(userId);
+  }
+
+  /**
+   * 获取游戏服务
+   */
+  getGameService(): GameService {
+    return this.gameService;
+  }
+
+  /**
+   * 通过条件查询房间
+   */
+  async findOne(filter: any): Promise<RoomDocument | null> {
+    return this.roomModel.findOne(filter).exec();
   }
 } 

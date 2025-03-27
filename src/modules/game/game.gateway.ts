@@ -22,6 +22,8 @@ import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
 import { FishSpawnDto, FishUpdateBehaviorDto } from './dto/fish.dto';
 import { ShootBulletDto, BulletCollisionDto, FishCollisionDto } from './dto/bullet.dto';
+import { MatchQueueService } from '../room/services/match-queue.service';
+import { HeartbeatService } from '../common/services/heartbeat.service';
 
 interface SocketWithUser extends Socket {
   user?: {
@@ -33,6 +35,8 @@ interface SocketWithUser extends Socket {
 }
 
 @WebSocketGateway({
+  port: 8080,
+  path: '/ws',
   cors: {
     origin: '*',
   },
@@ -56,14 +60,21 @@ export class GameGateway
     private jwtService: JwtService,
     private redisService: RedisService,
     private configService: ConfigService,
+    private matchQueueService: MatchQueueService,
+    private heartbeatService: HeartbeatService,
   ) {}
 
   afterInit(server: Server) {
-    console.log('WebSocket服务器初始化');
+    console.log('WebSocket 服务器已初始化');
+    
+    // 启动匹配队列检查器
+    this.matchQueueService.startMatchChecker(server);
   }
 
   async handleConnection(client: Socket) {
     try {
+      this.logger.log(`客户端已连接: ${client.id}`);
+      
       // 解析JWT令牌
       const token = this.extractToken(client);
       if (token) {
@@ -77,10 +88,30 @@ export class GameGateway
           const userId = payload.sub;
           this.userSocketMap.set(userId, client.id);
           
+          // 向客户端发送连接成功消息
+          client.emit('message', {
+            type: 'connection',
+            data: {
+              status: 'connected',
+              clientId: client.id,
+              timestamp: Date.now()
+            }
+          });
+          
           this.logger.log(`用户 ${userId} 已连接`);
         } catch (error) {
           this.logger.error(`令牌验证失败: ${error.message}`);
         }
+      } else {
+        // 匿名连接，仍然发送连接成功消息
+        client.emit('message', {
+          type: 'connection',
+          data: {
+            status: 'connected',
+            clientId: client.id,
+            timestamp: Date.now()
+          }
+        });
       }
     } catch (error) {
       this.logger.error(`处理连接失败: ${error.message}`);
@@ -91,10 +122,16 @@ export class GameGateway
     try {
       const socketWithUser = client as SocketWithUser;
       if (socketWithUser.user) {
-        const { userId } = socketWithUser.user;
+        const userId = socketWithUser.user.sub;
         
         // 清除Redis中的连接记录
         await this.redisService.del(`user:${userId}:socket`);
+        
+        // 清除心跳记录
+        await this.heartbeatService.removeHeartbeat(userId);
+        
+        // 从匹配队列中移除用户
+        await this.matchQueueService.removePlayerFromQueue(userId);
         
         // 如果用户在房间中，则让其离开房间
         const roomId = this.userRoomMap.get(userId);
@@ -661,6 +698,91 @@ export class GameGateway
     } catch (error) {
       this.logger.error(`处理鱼碰撞失败: ${error}`);
       return { success: false, message: error.message };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('match:cancel')
+  async handleCancelMatch(@ConnectedSocket() client: Socket) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权' };
+      }
+      
+      const { userId } = socketWithUser.user;
+      
+      // 从匹配队列中移除用户
+      await this.matchQueueService.removePlayerFromQueue(userId);
+      
+      return { success: true, message: '已取消匹配' };
+    } catch (error) {
+      console.error(`取消匹配失败: ${error}`);
+      return { success: false, message: error.message };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('heartbeat')
+  async handleHeartbeat(@ConnectedSocket() client: Socket) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权', type: 'heartbeat' };
+      }
+
+      const userId = socketWithUser.user.sub;
+      const clientId = client.id;
+      
+      // 记录心跳
+      await this.heartbeatService.recordHeartbeat(userId, clientId);
+      
+      // 发送心跳响应
+      return { 
+        success: true, 
+        type: 'heartbeat',
+        data: { 
+          status: 'ok',
+          timestamp: Date.now()
+        }
+      };
+    } catch (error) {
+      this.logger.error(`处理心跳消息时出错: ${error.message}`);
+      return { 
+        success: false, 
+        type: 'heartbeat',
+        message: '处理心跳消息时出错' 
+      };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('status')
+  async handleStatus(@ConnectedSocket() client: Socket) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权', type: 'status' };
+      }
+
+      const userId = socketWithUser.user.sub;
+      const status = await this.heartbeatService.getUserOnlineInfo(userId);
+      
+      return {
+        success: true,
+        type: 'status',
+        data: {
+          ...status,
+          timestamp: Date.now()
+        }
+      };
+    } catch (error) {
+      this.logger.error(`处理状态请求时出错: ${error.message}`);
+      return { 
+        success: false, 
+        type: 'status',
+        message: '处理状态请求时出错' 
+      };
     }
   }
 

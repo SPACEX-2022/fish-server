@@ -4,7 +4,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DatabaseLoggerService } from './services/database-logger.service';
 import { HeartbeatService } from './services/heartbeat.service';
 import { HeartbeatController } from './controllers/heartbeat.controller';
-import { HeartbeatGateway } from './gateways/heartbeat.gateway';
 import { JwtModule } from '@nestjs/jwt';
 
 @Global()
@@ -25,8 +24,7 @@ import { JwtModule } from '@nestjs/jwt';
     RedisService, 
     DatabaseLoggerService, 
     HeartbeatService,
-    HeartbeatGateway,
   ],
-  exports: [RedisService, HeartbeatService, JwtModule, HeartbeatGateway],
+  exports: [RedisService, HeartbeatService, JwtModule],
 })
 export class CommonModule {} 
