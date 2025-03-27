@@ -20,6 +20,8 @@ import { JwtPayload } from '../auth/dto/auth.dto';
 import { RedisService } from '../common/services/redis.service';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from '@nestjs/common';
+import { FishSpawnDto, FishUpdateBehaviorDto } from './dto/fish.dto';
+import { ShootBulletDto, BulletCollisionDto, FishCollisionDto } from './dto/bullet.dto';
 
 interface SocketWithUser extends Socket {
   user?: {
@@ -381,6 +383,283 @@ export class GameGateway
       return { success: true };
     } catch (error) {
       console.error(`准备下一局失败: ${error}`);
+      return { success: false, message: error.message };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('game:player_init')
+  async handlePlayerInit(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { position: { x: number, y: number }, weaponType: number }
+  ) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权' };
+      }
+      
+      const { sub: userId } = socketWithUser.user;
+      const roomId = this.userRoomMap.get(userId);
+      
+      if (!roomId) {
+        return { success: false, message: '用户不在任何房间中' };
+      }
+      
+      // 获取房间信息和玩家在房间中的位置
+      const room = await this.roomService.findById(roomId);
+      const playerIndex = room.players.findIndex(player => player.userId === userId);
+      
+      if (playerIndex === -1) {
+        return { success: false, message: '玩家不在房间中' };
+      }
+      
+      const { positionId, orientation, side, nickname, avatarUrl } = room.players[playerIndex];
+      
+      // 设置玩家武器类型
+      room.players[playerIndex].weaponType = data.weaponType;
+      await room.save();
+      
+      // 广播玩家初始化信息
+      const playerInitData = {
+        type: 'player',
+        roomId,
+        playerId: userId,
+        data: {
+          action: 'init',
+          position: data.position,
+          orientation,
+          side,
+          positionId,
+          nickname,
+          avatarUrl,
+          weaponType: data.weaponType,
+          score: room.players[playerIndex].score
+        }
+      };
+      
+      // 通知房间所有玩家
+      this.server.to(roomId).emit('game:player_init', playerInitData);
+      
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`玩家初始化失败: ${error}`);
+      return { success: false, message: error.message };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('game:shoot')
+  async handleShoot(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: ShootBulletDto
+  ) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权' };
+      }
+      
+      const { sub: userId } = socketWithUser.user;
+      const roomId = this.userRoomMap.get(userId);
+      
+      if (!roomId) {
+        return { success: false, message: '用户不在任何房间中' };
+      }
+      
+      // 增加玩家ID和时间戳到射击数据
+      const shootData = {
+        type: 'action',
+        roomId,
+        playerId: userId,
+        data: {
+          ...data,
+          clientTime: data.clientTime || Date.now()
+        },
+        timestamp: Date.now()
+      };
+      
+      // 广播射击事件
+      this.server.to(roomId).emit('game:shoot', shootData);
+      
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`处理射击事件失败: ${error}`);
+      return { success: false, message: error.message };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('game:fish_spawn')
+  async handleFishSpawn(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: FishSpawnDto
+  ) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权' };
+      }
+      
+      const { sub: userId } = socketWithUser.user;
+      const roomId = this.userRoomMap.get(userId);
+      
+      if (!roomId) {
+        return { success: false, message: '用户不在任何房间中' };
+      }
+      
+      // 检查用户是否是房主（只有房主可以生成鱼群）
+      const room = await this.roomService.findById(roomId);
+      if (room.hostId !== userId) {
+        return { success: false, message: '只有房主可以生成鱼群' };
+      }
+      
+      const fishData = {
+        type: 'fish',
+        roomId,
+        data,
+        timestamp: Date.now()
+      };
+      
+      // 广播鱼群生成事件
+      this.server.to(roomId).emit('game:fish_spawn', fishData);
+      
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`处理鱼群生成失败: ${error}`);
+      return { success: false, message: error.message };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('game:fish_behavior')
+  async handleFishBehavior(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: FishUpdateBehaviorDto
+  ) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权' };
+      }
+      
+      const { sub: userId } = socketWithUser.user;
+      const roomId = this.userRoomMap.get(userId);
+      
+      if (!roomId) {
+        return { success: false, message: '用户不在任何房间中' };
+      }
+      
+      // 检查用户是否是房主（只有房主可以更新鱼群行为）
+      const room = await this.roomService.findById(roomId);
+      if (room.hostId !== userId) {
+        return { success: false, message: '只有房主可以更新鱼群行为' };
+      }
+      
+      const behaviorData = {
+        type: 'fish',
+        roomId,
+        data,
+        timestamp: Date.now()
+      };
+      
+      // 广播鱼群行为更新事件
+      this.server.to(roomId).emit('game:fish_behavior', behaviorData);
+      
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`处理鱼群行为更新失败: ${error}`);
+      return { success: false, message: error.message };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('game:bullet_collision')
+  async handleBulletCollision(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: BulletCollisionDto
+  ) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权' };
+      }
+      
+      const { sub: userId } = socketWithUser.user;
+      const roomId = this.userRoomMap.get(userId);
+      
+      if (!roomId) {
+        return { success: false, message: '用户不在任何房间中' };
+      }
+      
+      // 检查用户是否是房主（只有房主可以确认子弹碰撞）
+      const room = await this.roomService.findById(roomId);
+      if (room.hostId !== userId) {
+        return { success: false, message: '只有房主可以确认子弹碰撞' };
+      }
+      
+      const collisionData = {
+        type: 'game',
+        roomId,
+        data,
+        timestamp: Date.now()
+      };
+      
+      // 广播子弹碰撞事件
+      this.server.to(roomId).emit('game:bullet_collision', collisionData);
+      
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`处理子弹碰撞失败: ${error}`);
+      return { success: false, message: error.message };
+    }
+  }
+
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('game:fish_collision')
+  async handleFishCollision(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: FishCollisionDto
+  ) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权' };
+      }
+      
+      const { sub: userId } = socketWithUser.user;
+      const roomId = this.userRoomMap.get(userId);
+      
+      if (!roomId) {
+        return { success: false, message: '用户不在任何房间中' };
+      }
+      
+      // 检查用户是否是房主（只有房主可以确认碰撞）
+      const room = await this.roomService.findById(roomId);
+      if (room.hostId !== userId) {
+        return { success: false, message: '只有房主可以确认碰撞结果' };
+      }
+      
+      // 更新相关玩家的得分
+      for (const collision of data.collisions) {
+        if (collision.killed) {
+          await this.gameService.updatePlayerScore(roomId, collision.playerId, collision.score, this.server);
+        }
+      }
+      
+      const collisionData = {
+        type: 'game',
+        roomId,
+        data,
+        timestamp: Date.now()
+      };
+      
+      // 广播碰撞事件
+      this.server.to(roomId).emit('game:fish_collision', collisionData);
+      
+      return { success: true };
+    } catch (error) {
+      this.logger.error(`处理鱼碰撞失败: ${error}`);
       return { success: false, message: error.message };
     }
   }

@@ -23,6 +23,11 @@ export interface PlayerInfo {
   score: number;
   isReady: boolean;
   isHost: boolean;
+  positionId?: number;  // 玩家位置ID
+  orientation?: 'top' | 'bottom';  // 玩家方向
+  side?: 'left' | 'right';  // 玩家侧边
+  weaponType?: number;  // 玩家武器类型
+  combo?: number;  // 连击数
 }
 
 @Schema({ timestamps: true })

@@ -3,9 +3,10 @@ import { RoomService } from './room.service';
 import { UserService } from '../user/user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CreateRoomDto, JoinRoomDto, RoomResponseDto, MatchRoomResponseDto } from './dto/room.dto';
-import { ApiTags, ApiBearerAuth, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiResponse, ApiParam, ApiBody, ApiOperation } from '@nestjs/swagger';
 import { ApiStandardResponse } from '../common/decorators/api-standard-response.decorator';
 import { RoomType } from './schemas/room.schema';
+import { PlayerPositionsDto } from './dto/player-position.dto';
 
 @ApiTags('房间')
 @ApiBearerAuth()
@@ -147,5 +148,18 @@ export class RoomController {
 
     // 转换为匹配响应DTO并返回
     return this.roomService.toMatchRoomResponseDto(room);
+  }
+
+  @Get('player-positions')
+  @ApiOperation({ summary: '获取玩家位置布局' })
+  @ApiResponse({ 
+    status: 200, 
+    description: '返回玩家位置布局',
+    type: PlayerPositionsDto 
+  })
+  getPlayerPositions(
+    @Inject('PLAYER_POSITIONS') playerPositions: PlayerPositionsDto
+  ): PlayerPositionsDto {
+    return playerPositions;
   }
 } 

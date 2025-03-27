@@ -4,6 +4,7 @@ import { RoomController } from './room.controller';
 import { RoomService } from './room.service';
 import { Room, RoomSchema } from './schemas/room.schema';
 import { UserModule } from '../user/user.module';
+import { PlayerPositionsDto } from './dto/player-position.dto';
 
 @Module({
   imports: [
@@ -11,7 +12,13 @@ import { UserModule } from '../user/user.module';
     forwardRef(() => UserModule),
   ],
   controllers: [RoomController],
-  providers: [RoomService],
+  providers: [
+    RoomService,
+    {
+      provide: 'PLAYER_POSITIONS',
+      useClass: PlayerPositionsDto
+    }
+  ],
   exports: [RoomService],
 })
 export class RoomModule {} 

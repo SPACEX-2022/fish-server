@@ -248,26 +248,35 @@ export class RoomService {
     // 查找房间
     const room = await this.findById(roomId);
     
-    // 检查是否是房主
-    if (room.hostId.toString() !== userId) {
-      throw new ForbiddenException('只有房主才能开始游戏');
+    // 检查用户是否是房主
+    if (room.hostId !== userId) {
+      throw new ForbiddenException('只有房主可以开始游戏');
     }
     
     // 检查房间状态
-    if (room.status !== RoomStatus.WAITING && room.status !== RoomStatus.COUNTDOWN) {
-      throw new BadRequestException('房间状态不允许开始游戏');
+    if (room.status === RoomStatus.PLAYING) {
+      throw new BadRequestException('游戏已经开始');
     }
     
-    // 检查玩家准备状态
-    const allReady = room.players.every(player => player.isReady || player.isHost);
-    if (!allReady) {
-      throw new BadRequestException('有玩家未准备');
+    // 检查玩家数量
+    if (room.players.length < 1) {
+      throw new BadRequestException('玩家数量不足');
     }
     
-    // 更新房间状态
+    // 公共房间检查所有玩家是否准备就绪
+    if (room.type === RoomType.PUBLIC) {
+      const allReady = room.players.every(player => player.isHost || player.isReady);
+      if (!allReady) {
+        throw new BadRequestException('有玩家未准备就绪');
+      }
+    }
+    
+    // 为所有玩家分配位置
+    await this.resetPlayerPositions(room);
+    
+    // 更新房间状态为游戏中
     room.status = RoomStatus.PLAYING;
     room.startTime = new Date();
-    room.currentRound += 1;
     
     return room.save();
   }
@@ -458,5 +467,109 @@ export class RoomService {
       playerCount: room.players.length,
       maxPlayerCount: this.maxPlayersPerRoom
     };
+  }
+
+  /**
+   * 分配玩家位置
+   * @param room 房间
+   * @param playerId 玩家ID
+   */
+  async assignPlayerPosition(room: RoomDocument, playerId: string): Promise<RoomDocument> {
+    const playerIndex = room.players.findIndex(player => player.userId === playerId);
+    
+    if (playerIndex === -1) {
+      throw new NotFoundException('玩家不在房间中');
+    }
+    
+    // 获取已分配的位置
+    const usedPositions = room.players
+      .filter(player => player.positionId !== undefined)
+      .map(player => player.positionId);
+    
+    // 可用位置（1-4）
+    const availablePositions = [1, 2, 3, 4].filter(pos => !usedPositions.includes(pos));
+    
+    if (availablePositions.length === 0) {
+      throw new BadRequestException('没有可用的位置');
+    }
+    
+    // 分配第一个可用位置
+    const positionId = availablePositions[0];
+    
+    // 设置方向和侧边
+    let orientation: 'top' | 'bottom';
+    let side: 'left' | 'right';
+    
+    switch (positionId) {
+      case 1:
+        orientation = 'bottom';
+        side = 'left';
+        break;
+      case 2:
+        orientation = 'bottom';
+        side = 'right';
+        break;
+      case 3:
+        orientation = 'top';
+        side = 'left';
+        break;
+      case 4:
+        orientation = 'top';
+        side = 'right';
+        break;
+      default:
+        orientation = 'bottom';
+        side = 'left';
+    }
+    
+    // 更新玩家信息
+    room.players[playerIndex].positionId = positionId;
+    room.players[playerIndex].orientation = orientation;
+    room.players[playerIndex].side = side;
+    
+    return room.save();
+  }
+
+  /**
+   * 重置玩家位置
+   * @param room 房间
+   */
+  async resetPlayerPositions(room: RoomDocument): Promise<RoomDocument> {
+    // 为现有玩家重新分配位置
+    for (let i = 0; i < room.players.length; i++) {
+      const positionId = i + 1;
+      if (positionId > 4) break; // 最多支持4个玩家
+      
+      let orientation: 'top' | 'bottom';
+      let side: 'left' | 'right';
+      
+      switch (positionId) {
+        case 1:
+          orientation = 'bottom';
+          side = 'left';
+          break;
+        case 2:
+          orientation = 'bottom';
+          side = 'right';
+          break;
+        case 3:
+          orientation = 'top';
+          side = 'left';
+          break;
+        case 4:
+          orientation = 'top';
+          side = 'right';
+          break;
+        default:
+          orientation = 'bottom';
+          side = 'left';
+      }
+      
+      room.players[i].positionId = positionId;
+      room.players[i].orientation = orientation;
+      room.players[i].side = side;
+    }
+    
+    return room.save();
   }
 } 
