@@ -123,4 +123,32 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   getClient(): Redis {
     return this.redisClient;
   }
+
+  // 获取分布式锁（使用 SET NX + 过期时间模式）
+  async acquireLock(key: string, owner: string, ttlSeconds: number): Promise<boolean> {
+    // 使用 ioredis 支持的方式设置带 NX 和 EX 选项的 key
+    const result = await this.redisClient.set(
+      key,
+      owner,
+      'EX',
+      ttlSeconds,
+      'NX'
+    );
+    return result === 'OK';
+  }
+
+  // 释放分布式锁（只有锁的拥有者才能释放）
+  async releaseLock(key: string, owner: string): Promise<boolean> {
+    // 使用 Lua 脚本确保原子性和安全性
+    const script = `
+      if redis.call("get", KEYS[1]) == ARGV[1] then
+        return redis.call("del", KEYS[1])
+      else
+        return 0
+      end
+    `;
+    
+    const result = await this.redisClient.eval(script, 1, key, owner);
+    return result === 1;
+  }
 } 

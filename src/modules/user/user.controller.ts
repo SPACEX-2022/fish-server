@@ -10,7 +10,9 @@ import { ApiStandardResponse } from '../common/decorators/api-standard-response.
 @ApiBearerAuth()
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+  ) {}
 
   @UseGuards(JwtAuthGuard)
   @Get('profile')

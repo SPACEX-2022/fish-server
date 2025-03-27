@@ -1,10 +1,11 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Request, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Request, BadRequestException, NotFoundException, Inject, forwardRef } from '@nestjs/common';
 import { RoomService } from './room.service';
 import { UserService } from '../user/user.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-import { CreateRoomDto, JoinRoomDto, RoomResponseDto } from './dto/room.dto';
+import { CreateRoomDto, JoinRoomDto, RoomResponseDto, MatchRoomResponseDto } from './dto/room.dto';
 import { ApiTags, ApiBearerAuth, ApiResponse, ApiParam, ApiBody } from '@nestjs/swagger';
 import { ApiStandardResponse } from '../common/decorators/api-standard-response.decorator';
+import { RoomType } from './schemas/room.schema';
 
 @ApiTags('房间')
 @ApiBearerAuth()
@@ -12,6 +13,7 @@ import { ApiStandardResponse } from '../common/decorators/api-standard-response.
 export class RoomController {
   constructor(
     private readonly roomService: RoomService,
+    @Inject(forwardRef(() => UserService))
     private readonly userService: UserService,
   ) {}
 
@@ -119,5 +121,31 @@ export class RoomController {
   async readyForNextGame(@Param('id') id: string, @Request() req) {
     const room = await this.roomService.readyForNextGame(id, req.user.sub);
     return this.roomService.toRoomResponseDto(room);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('match')
+  @ApiStandardResponse(MatchRoomResponseDto, '在线匹配')
+  async matchRoom(@Request() req) {
+    const user = await this.userService.findById(req.user.sub);
+    if (!user) {
+      throw new NotFoundException('用户不存在');
+    }
+
+    // 查找可匹配的房间
+    let room = await this.roomService.findMatchableRoom(req.user.sub);
+
+    // 如果没有可用房间，创建一个新的公共房间
+    if (!room) {
+      const createRoomDto = { type: RoomType.PUBLIC };
+      room = await this.roomService.create(req.user.sub, user, createRoomDto);
+    } else {
+      // 将用户加入找到的房间
+      const joinRoomDto = { roomCode: room.roomCode };
+      room = await this.roomService.joinRoom(req.user.sub, user, joinRoomDto);
+    }
+
+    // 转换为匹配响应DTO并返回
+    return this.roomService.toMatchRoomResponseDto(room);
   }
 } 
