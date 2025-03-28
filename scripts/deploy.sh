@@ -15,14 +15,22 @@ pnpm install
 echo "正在构建项目..."
 npm run build
 
-# 确保SSL目录存在
-echo "检查SSL证书目录..."
-mkdir -p ssl
+# 加载环境变量
+if [ -f ".env" ]; then
+  export $(cat .env | grep -v '^#' | xargs)
+fi
+
+# 设置默认证书路径
+SSL_CERT_PATH=${SSL_CERT_PATH:-"./ssl/cert.pem"}
+SSL_KEY_PATH=${SSL_KEY_PATH:-"./ssl/key.pem"}
 
 # 如果没有SSL证书，提示生成测试证书
-if [ ! -f "./ssl/cert.pem" ] || [ ! -f "./ssl/key.pem" ]; then
-  echo "未找到SSL证书，您可以使用以下命令生成自签名证书用于测试:"
-  echo "openssl req -x509 -newkey rsa:4096 -keyout ssl/key.pem -out ssl/cert.pem -days 365 -nodes"
+if [ "$HTTPS_ENABLED" = "true" ] && [[ ! -f "$SSL_CERT_PATH" || ! -f "$SSL_KEY_PATH" ]]; then
+  echo "未找到SSL证书，证书路径:"
+  echo "证书路径: $SSL_CERT_PATH"
+  echo "密钥路径: $SSL_KEY_PATH"
+  echo "您可以使用以下命令生成自签名证书用于测试:"
+  echo "openssl req -x509 -newkey rsa:4096 -keyout $SSL_KEY_PATH -out $SSL_CERT_PATH -days 365 -nodes"
 fi
 
 # 启动PM2

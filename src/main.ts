@@ -11,6 +11,7 @@ import { TransformInterceptor } from './modules/common/interceptors/transform.in
 import { HttpExceptionFilter } from './modules/common/filters/http-exception.filter';
 import { WsAdapter } from './modules/common/adapters/ws.adapter';
 import { fixArraySchemas } from './modules/common/plugins/swagger-array.plugin';
+import { HttpsOptions } from '@nestjs/common/interfaces/external/https-options.interface';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -30,7 +31,7 @@ async function bootstrap() {
   
   // 检查是否需要使用HTTPS
   const httpsEnabled = process.env.HTTPS_ENABLED === 'true';
-  let httpsOptions: { cert: Buffer; key: Buffer } | undefined = undefined;
+  let httpsOptions: HttpsOptions | undefined = undefined;
   
   if (httpsEnabled) {
     try {
