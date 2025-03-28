@@ -605,4 +605,11 @@ export class RoomService {
   async findOne(filter: any): Promise<RoomDocument | null> {
     return this.roomModel.findOne(filter).exec();
   }
+
+  /**
+   * 删除房间
+   */
+  async deleteRoom(roomId: string): Promise<void> {
+    await this.roomModel.findByIdAndDelete(roomId).exec();
+  }
 } 

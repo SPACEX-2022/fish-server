@@ -786,6 +786,46 @@ export class GameGateway
     }
   }
 
+  @UseGuards(WsJwtGuard)
+  @SubscribeMessage('player:ready')
+  async handlePlayerReady(@ConnectedSocket() client: Socket) {
+    try {
+      const socketWithUser = client as SocketWithUser;
+      if (!socketWithUser.user) {
+        return { success: false, message: '未授权' };
+      }
+      
+      const { userId } = socketWithUser.user;
+      const roomId = this.userRoomMap.get(userId);
+      
+      if (!roomId) {
+        return { success: false, message: '用户不在任何房间中' };
+      }
+      
+      // 设置玩家准备状态
+      await this.roomService.setReady(roomId, userId, true);
+      
+      // 获取更新后的房间信息
+      const room = await this.roomService.findById(roomId);
+      
+      // 广播更新后的房间信息
+      this.server.to(roomId).emit('room:updated', this.roomService.toRoomResponseDto(room));
+      
+      // 检查是否所有玩家都已准备
+      const allReady = room.players.every(p => p.isReady);
+      if (allReady) {
+        // 通过匹配队列服务开始游戏
+        const matchQueueService = this.matchQueueService;
+        await matchQueueService.startRoomGame(roomId, this.server);
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error(`设置玩家准备状态失败: ${error}`);
+      return { success: false, message: error.message };
+    }
+  }
+
   private extractToken(client: Socket): string | undefined {
     const token = client.handshake.auth.token || client.handshake.headers.authorization?.split(' ')[1];
     return token;

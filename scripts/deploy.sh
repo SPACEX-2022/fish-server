@@ -4,9 +4,13 @@
 pm2 stop fish-game-server || true
 pm2 delete fish-game-server || true
 
+# 安装依赖
+echo "正在安装依赖..."
+pnpm install
+
 # 构建项目
 echo "正在构建项目..."
-pnpm build
+npm run build
 
 # 确保SSL目录存在
 echo "检查SSL证书目录..."
