@@ -21,9 +21,10 @@ jobs:
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - name: Run a command remotely
-      uses: docker://evaneos/ssh-action:0.1.0
+      uses: appleboy/ssh-action@v1
       with:
         hosts: ${{ secrets.REMOTE_HOST }}
         user: ${{ secrets.REMOTE_USER }}
-        private_key: ${{ secrets.SERVER_SSH_KEY }}
-        commands: sh /root/fish-server/scripts/deploy.sh
+        key: ${{ secrets.SERVER_SSH_KEY }}
+        port: 22
+        script: sh /root/fish-server/scripts/deploy.sh

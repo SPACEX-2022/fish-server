@@ -4,6 +4,9 @@
 pm2 stop fish-game-server || true
 pm2 delete fish-game-server || true
 
+# 拉取最新代码
+git pull
+
 # 安装依赖
 echo "正在安装依赖..."
 pnpm install
