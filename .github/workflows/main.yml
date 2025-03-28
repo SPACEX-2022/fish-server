@@ -35,4 +35,6 @@ jobs:
         host: ${{ secrets.REMOTE_HOST }}
         username: ${{ secrets.REMOTE_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
-        script: sh /root/fish-server/scripts/deploy.sh
+        script: |
+          cd /root/fish-server
+          sh scripts/deploy.sh
