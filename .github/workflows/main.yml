@@ -23,8 +23,8 @@ jobs:
     - name: Run a command remotely
       uses: appleboy/ssh-action@v1
       with:
-        hosts: ${{ secrets.REMOTE_HOST }}
-        user: ${{ secrets.REMOTE_USER }}
+        host: ${{ secrets.REMOTE_HOST }}
+        username: ${{ secrets.REMOTE_USER }}
         key: ${{ secrets.SERVER_SSH_KEY }}
         port: 22
         script: sh /root/fish-server/scripts/deploy.sh
