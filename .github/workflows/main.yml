@@ -22,11 +22,11 @@ jobs:
     steps:
     
     # 打印环境变量
-    - name: Print environment variables
-      run: |
-        echo "REMOTE_HOST: ${{ secrets.REMOTE_HOST }}"
-        echo "REMOTE_USER: ${{ secrets.REMOTE_USER }}"
-        echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}"
+    # - name: Print environment variables
+    #   run: |
+    #     echo "REMOTE_HOST: ${{ secrets.REMOTE_HOST }}"
+    #     echo "REMOTE_USER: ${{ secrets.REMOTE_USER }}"
+    #     echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}"
 
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - name: Run a command remotely
