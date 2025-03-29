@@ -50,7 +50,7 @@ jobs:
       #     echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}"
 
       - name: Upload files
-        uses: appleboy/scp-action
+        uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
@@ -59,7 +59,7 @@ jobs:
           target: /root/fish-server/dist.tar.gz
 
       - name: Deploy
-        uses: appleboy/ssh-action
+        uses: appleboy/ssh-action@v1.2.2
         with:
           host: ${{ secrets.REMOTE_HOST }}
           username: ${{ secrets.REMOTE_USER }}
