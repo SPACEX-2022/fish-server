@@ -39,7 +39,7 @@ jobs:
 
       - name: Compress files
         run: |
-          tar -czvf dist.tar.gz ./dist/* ./ecosystem.config.js ./package.json
+          tar -czvf dist.tar.gz ./dist/* ./ecosystem.config.js ./package.json ./pnpm-lock.yaml
 
 
       # 打印环境变量
