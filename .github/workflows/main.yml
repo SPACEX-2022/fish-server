@@ -20,7 +20,7 @@ jobs:
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v2
         with:
           version: 9.15.4
@@ -56,7 +56,7 @@ jobs:
           username: ${{ secrets.REMOTE_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           source: dist.tar.gz
-          target: /root/fish-server/dist.tar.gz
+          target: /root/fish-server
 
       - name: Deploy
         uses: appleboy/ssh-action@v1.2.2
