@@ -50,7 +50,7 @@ export class MatchQueueService {
 
   // 将玩家添加到匹配队列
   async addPlayerToQueue(user: User | UserDocument): Promise<void> {
-    const userId = (user as any)._id?.toString() || user.id || user.userId;
+    const userId = (user as any)._id?.toString();
     
     const player: MatchingPlayer = {
       userId,
