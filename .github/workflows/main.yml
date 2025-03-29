@@ -21,20 +21,48 @@ jobs:
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
     
-    # 打印环境变量
-    # - name: Print environment variables
-    #   run: |
-    #     echo "REMOTE_HOST: ${{ secrets.REMOTE_HOST }}"
-    #     echo "REMOTE_USER: ${{ secrets.REMOTE_USER }}"
-    #     echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}"
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-    - name: Run a command remotely
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.REMOTE_HOST }}
-        username: ${{ secrets.REMOTE_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        script: |
-          cd /root/fish-server
-          sh scripts/deploy.sh
+      - name: Install dependencies
+        run: |
+          pnpm install
+
+      - name: Build
+        run: |
+          npm run build
+
+      - name: Compress files
+        run: |
+          tar -czvf dist.tar.gz dist ecosystem.config.js package.json
+
+
+      # 打印环境变量
+      # - name: Print environment variables
+      #   run: |
+      #     echo "REMOTE_HOST: ${{ secrets.REMOTE_HOST }}"
+      #     echo "REMOTE_USER: ${{ secrets.REMOTE_USER }}"
+      #     echo "SERVER_SSH_KEY: ${{ secrets.SERVER_SSH_KEY }}"
+
+      - name: Upload files
+        uses: appleboy/scp-action
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          source: dist.tar.gz
+          target: /root/fish-server/dist.tar.gz
+
+      - name: Deploy
+        uses: appleboy/ssh-action
+        with:
+          host: ${{ secrets.REMOTE_HOST }}
+          username: ${{ secrets.REMOTE_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd /root/fish-server
+            tar -xzvf dist.tar.gz --strip-components=1
+            pnpm install --prod
+            pm2 stop fish-game-server || true
+            pm2 delete fish-game-server || true
+            pm2 start ecosystem.config.js
