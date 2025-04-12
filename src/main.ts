@@ -129,6 +129,17 @@ async function bootstrap() {
   // 启动服务
   const port = configService.get<number>('PORT', 3000);
   await app.listen(port);
+
+  // 打印环境变量 
+  logger.log('====================================');
+  logger.log('环境变量:');
+  logger.log(`NODE_ENV: ${process.env.NODE_ENV}`);
+  logger.log(`PORT: ${process.env.PORT}`);
+  logger.log(`MONGODB_URI: ${process.env.MONGODB_URI}`);
+  logger.log(`WX_APPID: ${process.env.WX_APPID}`);
+  logger.log(`WX_SECRET: ${process.env.WX_SECRET}`);
+  logger.log('====================================');
+
   
   const protocol = httpsEnabled ? 'https' : 'http';
   logger.log('====================================');
